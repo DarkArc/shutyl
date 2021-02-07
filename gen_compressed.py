@@ -92,6 +92,10 @@ for dst_root, dirs, files in os.walk(dst):
 
   # Remove any directories that (no longer) exist in the source file set
   for name in dirs:
+    # Compatibility with syncthing
+    if name == '.stfolder':
+      continue
+
     src_folder = os.path.join(src_root, name)
     dst_folder = os.path.join(dst_root, name)
     if not os.path.exists(src_folder):
