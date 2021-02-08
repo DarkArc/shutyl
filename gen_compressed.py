@@ -33,13 +33,13 @@ def to_dst_file_name(src_name):
 def to_src_file_names(dst_name):
   split_name = os.path.splitext(dst_name)
   dst_ext = split_name[1]
+
+  possible_names = [dst_name]
   if dst_ext == target_ext:
-    possible_names = []
     for ext in supported_conversions:
       possible_names.append("{0}{1}".format(split_name[0], ext))
-    return possible_names
-  else:
-    return [dst_name]
+
+  return possible_names
 
 # Convert src_nmaes to src_files
 def to_src_files(src_root, src_names):
