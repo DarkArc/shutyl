@@ -160,7 +160,7 @@ def add_files():
         )
 
 def remove_files():
-  for dst_root, dirs, files in os.walk(dst):
+  for dst_root, dirs, files in os.walk(dst, topdown=False):
     # Setup the source directory
     src_root = dst_root.replace(dst, src, 1)
 
@@ -174,7 +174,7 @@ def remove_files():
       dst_folder = os.path.join(dst_root, name)
       if not os.path.exists(src_folder):
         print("- {0}".format(dst_folder))
-        os.removedirs(dst_folder)
+        os.rmdir(dst_folder)
 
     # Remove any files that (no longer) exist in the source file set
     for dst_name in files:
