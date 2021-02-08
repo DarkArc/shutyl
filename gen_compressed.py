@@ -56,14 +56,14 @@ def to_src_file_names(dst_name):
 
   return possible_names
 
-# Convert src_nmaes to src_files
+# Convert src_names to src_files
 def to_src_files(src_root, src_names):
   src_files = []
   for src_name in src_names:
     src_files.append(os.path.join(src_root, src_name))
   return src_files
 
-# Check if any of the provided src_files (still) exsits
+# Check if any of the provided src_files (still) exist
 def any_srcs_exists(src_files):
   for src_file in src_files:
     if os.path.exists(src_file):
@@ -107,7 +107,7 @@ def copy_or_convert(src_root, src_name, dst_root, dst_name):
   if not needs_update(src_file, dst_file):
     return
 
-  # If the file name doesn't match a conversion is implied
+  # If the file name doesn't match, a conversion is implied
   if src_name != dst_name:
     # Use ffmpeg to perform a conversion
     print("~ {0}".format(dst_file))
@@ -164,7 +164,7 @@ def remove_files():
     # Setup the source directory
     src_root = dst_root.replace(dst, src, 1)
 
-    # Remove any directories that (no longer) exist in the source file set
+    # Remove destination directories that no longer exist in the source file set
     for name in dirs:
       # Compatibility with syncthing
       if name == '.stfolder':
@@ -176,7 +176,7 @@ def remove_files():
         print("- {0}".format(dst_folder))
         os.rmdir(dst_folder)
 
-    # Remove any files that (no longer) exist in the source file set
+    # Remove destination files that no longer exist in the source file set
     for dst_name in files:
       src_names = to_src_file_names(dst_name)
       src_files = to_src_files(src_root, src_names)
