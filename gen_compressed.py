@@ -56,6 +56,19 @@ def any_srcs_exists(src_files):
 
   return False
 
+# Check if a dst_file also exists for the target conversion type
+def target_also_exists(dst_name):
+  target_dst_name = to_dst_file_name(dst_name)
+
+  # This is what we would convert to, there can't be a converted
+  # version of this file
+  if target_dst_name == dst_name:
+    return False
+
+  # Unless something failed, this file would have been converted,
+  # optimistically remove
+  return True
+
 # Return the stats for a particular file
 def get_file_stats(file):
   return pathlib.Path(file).stat()
@@ -153,8 +166,9 @@ def remove_files():
       src_names = to_src_file_names(dst_name)
       src_files = to_src_files(src_root, src_names)
 
-      if not any_srcs_exists(src_files):
-        dst_file = os.path.join(dst_root, dst_name)
+      dst_file = os.path.join(dst_root, dst_name)
+
+      if not any_srcs_exists(src_files) or target_also_exists(dst_name):
         print("- {0}".format(dst_file))
         os.remove(dst_file)
 
