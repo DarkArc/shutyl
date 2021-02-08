@@ -7,17 +7,21 @@ import subprocess
 
 from concurrent.futures import ThreadPoolExecutor
 
+# Configuration
 src = 'Source'
 dst = 'Compressed'
 
 supported_conversions = ['.flac', '.wav']
-file_target = '.ogg'
+target_codec = 'libvorbis'
+target_bitrate = '320k'
+target_ext = '.ogg'
 
 # Convert src_ext to a dst_ext
 def to_dst_file_ext(src_ext):
-  # If the source extension is in our supported_conversion types, this file's new extension should be file_target
+  # If the source extension is in our supported_conversion types, this
+  # file's new extension should be target_ext
   if src_ext in supported_conversions:
-    return file_target
+    return target_ext
   return src_ext
 
 # Convert src_name to dst_name
@@ -29,7 +33,7 @@ def to_dst_file_name(src_name):
 def to_src_file_names(dst_name):
   split_name = os.path.splitext(dst_name)
   dst_ext = split_name[1]
-  if dst_ext == file_target:
+  if dst_ext == target_ext:
     possible_names = []
     for ext in supported_conversions:
       possible_names.append("{0}{1}".format(split_name[0], ext))
@@ -79,7 +83,17 @@ def copy_or_convert(src_root, src_name, dst_root, dst_name):
   if src_name != dst_name:
     # Use ffmpeg to perform a conversion
     print("~ {0}".format(dst_file))
-    subprocess.call(['ffmpeg', '-i', src_file, '-vn', '-c:a', 'libvorbis', '-ab', '320k', dst_file], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+    subprocess.call(
+      [
+        'ffmpeg',
+        '-i', src_file,        # Set the source file
+        '-vn',                 # Disable video
+        '-c:a', target_codec,  # Set the audio codec
+        '-ab', target_bitrate, # Set the target bitrate
+        dst_file               # Set the destination file
+      ],
+      stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL
+    )
   else:
     # Copy the file preserving metadata
     print("+ {0}".format(dst_file))
