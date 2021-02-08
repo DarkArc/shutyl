@@ -1,8 +1,10 @@
 #!/bin/python3
 
 import os
+import pathlib
 import shutil
 import subprocess
+
 from concurrent.futures import ThreadPoolExecutor
 
 src = 'Source'
@@ -50,20 +52,36 @@ def any_srcs_exists(src_files):
 
   return False
 
+# Return the stats for a particular file
+def get_file_stats(file):
+  return pathlib.Path(file).stat()
+
+# Check if a src_file is newer than dest_file
+def needs_update(src_file, dst_file):
+  if not os.path.exists(dst_file):
+    return True
+
+  src_file_stats = get_file_stats(src_file)
+  dst_file_stats = get_file_stats(dst_file)
+
+  return src_file_stats.st_mtime > dst_file_stats.st_mtime
+
 # Copy or convert the file src_name in src_root to dst_root with dst_name
 def copy_or_convert(src_root, src_name, dst_root, dst_name):
   src_file = os.path.join(src_root, src_name)
   dst_file = os.path.join(dst_root, dst_name)
 
-  # If the file does not exist and needs conversion, use ffmpeg, otherwise copy it
-  if os.path.exists(dst_file):
+  # If the file doesn't need an update, skip it
+  if not needs_update(src_file, dst_file):
     return
 
   # If the file name doesn't match a conversion is implied
   if src_name != dst_name:
+    # Use ffmpeg to perform a conversion
     print("~ {0}".format(dst_file))
     subprocess.call(['ffmpeg', '-i', src_file, '-vn', '-c:a', 'libvorbis', '-ab', '320k', dst_file], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
   else:
+    # Copy the file preserving metadata
     print("+ {0}".format(dst_file))
     shutil.copy2(src_file, dst_file, follow_symlinks=False)
 
