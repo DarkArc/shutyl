@@ -56,6 +56,9 @@ if __name__ == '__main__':
   except JSONDecodeError as parse_error:
     print("The config file is not valid json at line {0}:{1}".format(parse_error.lineno, parse_error.colno))
     exit(1)
+  except TypeError as parse_error:
+    print("The config file was not structured correctly. Please compare against the example config.")
+    exit(1)
 
   # Switch the working directory the location of the config file.
   #
