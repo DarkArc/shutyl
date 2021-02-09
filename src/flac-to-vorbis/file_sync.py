@@ -1,19 +1,21 @@
-#!/bin/python3
-
 # Copyright 2021 Wyatt Childers
 #
-# This program is free software: you can redistribute it and/or modify
+# This file is part of flac-to-vorbis.
+#
+# flac-to-vorbis is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful,
+# flac-to-vorbis is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# along with flac-to-vorbis.  If not, see <https://www.gnu.org/licenses/>.
+
+from config import ScriptConfig, ConversionConfig, TargetConfig
 
 import os
 import pathlib
@@ -21,37 +23,30 @@ import shutil
 import subprocess
 
 from concurrent.futures import ThreadPoolExecutor
-
-# Configuration
-src = 'Source'
-dst = 'Compressed'
-
-supported_conversions = ['.flac', '.wav']
-target_codec = 'libvorbis'
-target_bitrate = '320k'
-target_ext = '.ogg'
+from typing import List
 
 # Convert src_ext to a dst_ext
-def to_dst_file_ext(src_ext):
-  # If the source extension is in our supported_conversion types, this
+def to_dst_file_ext(config: ConversionConfig, src_ext: str):
+  # If the source extension is in our list of converted types, this
   # file's new extension should be target_ext
-  if src_ext in supported_conversions:
-    return target_ext
+  if src_ext in config.converted_types:
+    return config.target.ext
+
   return src_ext
 
 # Convert src_name to dst_name
-def to_dst_file_name(src_name):
+def to_dst_file_name(config: ConversionConfig, src_name: str):
   split_name = os.path.splitext(src_name)
-  return "{0}{1}".format(split_name[0], to_dst_file_ext(split_name[1]))
+  return "{0}{1}".format(split_name[0], to_dst_file_ext(config, split_name[1]))
 
 # Convert dst_name to src_names
-def to_src_file_names(dst_name):
+def to_src_file_names(config: ConversionConfig, dst_name: str):
   split_name = os.path.splitext(dst_name)
   dst_ext = split_name[1]
 
   possible_names = [dst_name]
-  if dst_ext == target_ext:
-    for ext in supported_conversions:
+  if dst_ext == config.target.ext:
+    for ext in config.converted_types:
       possible_names.append("{0}{1}".format(split_name[0], ext))
 
   return possible_names
@@ -72,8 +67,8 @@ def any_srcs_exists(src_files):
   return False
 
 # Check if a dst_file also exists for the target conversion type
-def target_also_exists(dst_name):
-  target_dst_name = to_dst_file_name(dst_name)
+def target_also_exists(config: ConversionConfig, dst_name: str):
+  target_dst_name = to_dst_file_name(config, dst_name)
 
   # This is what we would convert to, there can't be a converted
   # version of this file
@@ -85,11 +80,11 @@ def target_also_exists(dst_name):
   return True
 
 # Return the stats for a particular file
-def get_file_stats(file):
+def get_file_stats(file: str):
   return pathlib.Path(file).stat()
 
 # Check if a src_file is newer than dest_file
-def needs_update(src_file, dst_file):
+def needs_update(src_file: str, dst_file: str):
   if not os.path.exists(dst_file):
     return True
 
@@ -99,7 +94,9 @@ def needs_update(src_file, dst_file):
   return src_file_stats.st_mtime > dst_file_stats.st_mtime
 
 # Copy or convert the file src_name in src_root to dst_root with dst_name
-def copy_or_convert(src_root, src_name, dst_root, dst_name):
+def copy_or_convert(config: TargetConfig,
+                    src_root: str, src_name: str,
+                    dst_root: str, dst_name: str):
   src_file = os.path.join(src_root, src_name)
   dst_file = os.path.join(dst_root, dst_name)
 
@@ -116,8 +113,8 @@ def copy_or_convert(src_root, src_name, dst_root, dst_name):
         'ffmpeg',
         '-i', src_file,        # Set the source file
         '-vn',                 # Disable video
-        '-c:a', target_codec,  # Set the audio codec
-        '-ab', target_bitrate, # Set the target bitrate
+        '-c:a', config.codec,  # Set the audio codec
+        '-ab', config.bitrate, # Set the target bitrate
         dst_file               # Set the destination file
       ],
       stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL
@@ -127,13 +124,13 @@ def copy_or_convert(src_root, src_name, dst_root, dst_name):
     print("+ {0}".format(dst_file))
     shutil.copy2(src_file, dst_file, follow_symlinks=False)
 
-def add_files():
+def add_files(config: ScriptConfig):
   with ThreadPoolExecutor() as executor:
     futures = []
 
-    for src_root, dirs, files in os.walk(src):
+    for src_root, dirs, files in os.walk(config.src_dir):
       # Setup the destination directory
-      dst_root = src_root.replace(src, dst, 1)
+      dst_root = src_root.replace(config.src_dir, config.dst_dir, 1)
 
       for name in dirs:
         # Skip hidden files
@@ -151,18 +148,27 @@ def add_files():
         if src_name.startswith('.'):
           continue
 
-        dst_name = to_dst_file_name(src_name)
+        dst_name = to_dst_file_name(config.conversion, src_name)
 
         executor.submit(
           copy_or_convert,
+          config.conversion.target,
           src_root, src_name,
           dst_root, dst_name
         )
 
-def remove_files():
-  for dst_root, dirs, files in os.walk(dst, topdown=False):
+def should_remove_file(config: ConversionConfig,
+                       src_files: List[str], dst_name: str):
+  if not any_srcs_exists(src_files):
+    return True
+  if target_also_exists(config, dst_name):
+    return True
+  return False
+
+def remove_files(config: ScriptConfig):
+  for dst_root, dirs, files in os.walk(config.dst_dir, topdown=False):
     # Setup the source directory
-    src_root = dst_root.replace(dst, src, 1)
+    src_root = dst_root.replace(config.dst_dir, config.src_dir, 1)
 
     # Remove destination directories that no longer exist in the source file set
     for name in dirs:
@@ -178,14 +184,11 @@ def remove_files():
 
     # Remove destination files that no longer exist in the source file set
     for dst_name in files:
-      src_names = to_src_file_names(dst_name)
+      src_names = to_src_file_names(config.conversion, dst_name)
       src_files = to_src_files(src_root, src_names)
 
       dst_file = os.path.join(dst_root, dst_name)
 
-      if not any_srcs_exists(src_files) or target_also_exists(dst_name):
+      if should_remove_file(config.conversion, src_files, dst_name):
         print("- {0}".format(dst_file))
         os.remove(dst_file)
-
-add_files()
-remove_files()
