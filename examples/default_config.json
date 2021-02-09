@@ -1,0 +1,14 @@
+{
+  "src_dir": "Source",
+  "dst_dir": "Compressed",
+  "conversion": {
+    "converted_types": [
+      ".flac", ".wav"
+    ],
+    "target": {
+      "codec": "libvorbis",
+      "bitrate": "320k",
+      "ext": ".ogg"
+    }
+  }
+}
