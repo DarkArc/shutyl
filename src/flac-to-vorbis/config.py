@@ -60,6 +60,15 @@ class PrinterConfig(object):
     self.existing = ExistingPrinterConfig(**existing)
     self.remove = RemovePrinterConfig(**remove)
 
+  def make_verbose(self):
+    self.add.file = True
+    self.add.directory = True
+    self.conversion.file = True
+    self.existing.file = True
+    self.existing.directory = True
+    self.remove.file = True
+    self.remove.directory = True
+
 class ScriptConfig(object):
   def __init__(self, src_dir: str, dst_dir: str,
                conversion: ConversionConfig,

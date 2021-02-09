@@ -23,14 +23,13 @@ import os
 
 from json.decoder import JSONDecodeError
 
-def parse_config_path():
+def parse_args():
   # Setup the command parser
   parser = argparse.ArgumentParser(description='Create a compressed version of your music library.')
   parser.add_argument('config_file', help='the configuration file for the music library')
+  parser.add_argument('-v', '--verbose', dest ='verbose', action='store_true', help='force verbose printing mode')
 
-  # Parse the arguments and return the config file path string
-  args = parser.parse_args()
-  return args.config_file
+  return parser.parse_args()
 
 def validate_config(config: ScriptConfig):
   # Verify src_dir and dst_dir exist
@@ -44,8 +43,14 @@ def validate_config(config: ScriptConfig):
     print("The configured destination directory '{0}' does not exist".format(abs_dst_dir))
     exit(1)
 
+def apply_flags(args, config: ScriptConfig):
+  if args.verbose:
+    config.printer.make_verbose()
+
 if __name__ == '__main__':
-  config_file = parse_config_path()
+  args = parse_args()
+
+  config_file = args.config_file
   if not os.path.exists(config_file):
     print("The specified config file '{0}' could not be found.".format(config_file))
     exit(1)
@@ -68,6 +73,7 @@ if __name__ == '__main__':
   os.chdir(config_dir)
 
   validate_config(config)
+  apply_flags(args, config)
 
   add_files(config)
   remove_files(config)
