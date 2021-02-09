@@ -21,6 +21,8 @@ from file_sync import add_files, remove_files
 import argparse
 import os
 
+from json.decoder import JSONDecodeError
+
 def parse_config_path():
   # Setup the command parser
   parser = argparse.ArgumentParser(description='Create a compressed version of your music library.')
@@ -49,7 +51,11 @@ if __name__ == '__main__':
     exit(1)
 
   # Load the config file object
-  config = load_config(config_file)
+  try:
+    config = load_config(config_file)
+  except JSONDecodeError as parse_error:
+    print("The config file is not valid json at line {0}:{1}".format(parse_error.lineno, parse_error.colno))
+    exit(1)
 
   # Switch the working directory the location of the config file.
   #
