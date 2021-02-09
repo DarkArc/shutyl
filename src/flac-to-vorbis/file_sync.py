@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with flac-to-vorbis.  If not, see <https://www.gnu.org/licenses/>.
 
-from config import ScriptConfig, ConversionConfig, TargetConfig
+from config import ScriptConfig, ConversionConfig, TargetConfig, PrinterConfig
 
 import os
 import pathlib
@@ -94,7 +94,8 @@ def needs_update(src_file: str, dst_file: str):
   return src_file_stats.st_mtime > dst_file_stats.st_mtime
 
 # Copy or convert the file src_name in src_root to dst_root with dst_name
-def copy_or_convert(config: TargetConfig,
+def copy_or_convert(printer_config: PrinterConfig,
+                    target_config: TargetConfig,
                     src_root: str, src_name: str,
                     dst_root: str, dst_name: str):
   src_file = os.path.join(src_root, src_name)
@@ -102,32 +103,34 @@ def copy_or_convert(config: TargetConfig,
 
   # If the file doesn't need an update, skip it
   if not needs_update(src_file, dst_file):
+    if printer_config.existing.file:
+      print("= {0}".format(dst_file))
     return
 
   # If the file name doesn't match, a conversion is implied
   if src_name != dst_name:
     # Use ffmpeg to perform a conversion
-    print("~ {0}".format(dst_file))
+    if printer_config.conversion.file:
+      print("~ {0}".format(dst_file))
     subprocess.call(
       [
         'ffmpeg',
-        '-i', src_file,        # Set the source file
-        '-vn',                 # Disable video
-        '-c:a', config.codec,  # Set the audio codec
-        '-ab', config.bitrate, # Set the target bitrate
-        dst_file               # Set the destination file
+        '-i', src_file,               # Set the source file
+        '-vn',                        # Disable video
+        '-c:a', target_config.codec,  # Set the audio codec
+        '-ab', target_config.bitrate, # Set the target bitrate
+        dst_file                      # Set the destination file
       ],
       stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL
     )
   else:
     # Copy the file preserving metadata
-    print("+ {0}".format(dst_file))
+    if printer_config.add.file:
+      print("+ {0}".format(dst_file))
     shutil.copy2(src_file, dst_file, follow_symlinks=False)
 
 def add_files(config: ScriptConfig):
   with ThreadPoolExecutor() as executor:
-    futures = []
-
     for src_root, dirs, files in os.walk(config.src_dir):
       # Setup the destination directory
       dst_root = src_root.replace(config.src_dir, config.dst_dir, 1)
@@ -140,8 +143,11 @@ def add_files(config: ScriptConfig):
         # Create missing folders
         dst_folder = os.path.join(dst_root, name)
         if not os.path.exists(dst_folder):
-          print("+ {0}".format(dst_folder))
+          if config.printer.add.directory:
+            print("+ {0}".format(dst_folder))
           os.makedirs(dst_folder)
+        elif config.printer.existing.directory:
+          print("= {0}".format(dst_folder))
 
       for src_name in files:
         # Skip hidden files
@@ -152,7 +158,7 @@ def add_files(config: ScriptConfig):
 
         executor.submit(
           copy_or_convert,
-          config.conversion.target,
+          config.printer, config.conversion.target,
           src_root, src_name,
           dst_root, dst_name
         )
@@ -179,7 +185,8 @@ def remove_files(config: ScriptConfig):
       src_folder = os.path.join(src_root, name)
       dst_folder = os.path.join(dst_root, name)
       if not os.path.exists(src_folder):
-        print("- {0}".format(dst_folder))
+        if config.printer.remove.directory:
+          print("- {0}".format(dst_folder))
         os.rmdir(dst_folder)
 
     # Remove destination files that no longer exist in the source file set
@@ -190,5 +197,6 @@ def remove_files(config: ScriptConfig):
       dst_file = os.path.join(dst_root, dst_name)
 
       if should_remove_file(config.conversion, src_files, dst_name):
-        print("- {0}".format(dst_file))
+        if config.printer.remove.file:
+          print("- {0}".format(dst_file))
         os.remove(dst_file)

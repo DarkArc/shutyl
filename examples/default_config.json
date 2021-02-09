@@ -10,5 +10,22 @@
       "bitrate": "320k",
       "ext": ".ogg"
     }
+  },
+  "printer": {
+    "add": {
+      "file": true,
+      "directory": true
+    },
+    "conversion": {
+      "file": true
+    },
+    "existing": {
+      "file": false,
+      "directory": false
+    },
+    "remove": {
+      "file": true,
+      "directory": true
+    }
   }
 }

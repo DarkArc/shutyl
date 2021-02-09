@@ -30,11 +30,44 @@ class ConversionConfig(object):
     self.converted_types = converted_types
     self.target = TargetConfig(**target)
 
+class AddPrinterConfig(object):
+  def __init__(self, file: bool, directory: bool):
+    self.file = file
+    self.directory = directory
+
+class ConversionPrinterConfig(object):
+  def __init__(self, file: bool):
+    self.file = file
+
+class ExistingPrinterConfig(object):
+  def __init__(self, file: bool, directory: bool):
+    self.file = file
+    self.directory = directory
+
+class RemovePrinterConfig(object):
+  def __init__(self, file: bool, directory: bool):
+    self.file = file
+    self.directory = directory
+
+class PrinterConfig(object):
+  def __init__(self,
+               add: AddPrinterConfig,
+               conversion: ConversionPrinterConfig,
+               existing: ExistingPrinterConfig,
+               remove: RemovePrinterConfig):
+    self.add = AddPrinterConfig(**add)
+    self.conversion = ConversionPrinterConfig(**conversion)
+    self.existing = ExistingPrinterConfig(**existing)
+    self.remove = RemovePrinterConfig(**remove)
+
 class ScriptConfig(object):
-  def __init__(self, src_dir: str, dst_dir: str, conversion: ConversionConfig):
+  def __init__(self, src_dir: str, dst_dir: str,
+               conversion: ConversionConfig,
+               printer: PrinterConfig):
     self.src_dir = src_dir
     self.dst_dir = dst_dir
     self.conversion = ConversionConfig(**conversion)
+    self.printer = PrinterConfig(**printer)
 
 def load_config(config_file):
   with open(config_file, 'r') as file_handle:
