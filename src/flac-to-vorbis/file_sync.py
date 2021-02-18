@@ -87,9 +87,6 @@ def get_file_stats(file: str):
 
 # Check if a src_file is newer than dest_file
 def needs_update(src_file: str, dst_file: str):
-  if not os.path.exists(dst_file):
-    return True
-
   src_file_stats = get_file_stats(src_file)
   dst_file_stats = get_file_stats(dst_file)
 
@@ -109,18 +106,22 @@ def copy_or_convert(printer_config: PrinterConfig,
   dst_file = os.path.join(dst_root, dst_name)
 
   # If the file doesn't need an update, skip it
-  if not needs_update(src_file, dst_file):
-    if printer_config.existing.file:
-      print("= {0}".format(dst_file))
-    return
+  if os.path.exists(dst_file):
+    # If the file was updated in the future, skip it
+    if updated_in_future(src_file):
+      print(
+        "! {0} - was updated in the future, skipped".format(src_file),
+        file=sys.stderr
+      )
+      return
 
-  # If the file was updated in the future, skip it
-  if updated_in_future(src_file):
-    print(
-      "! {0} - was updated in the future, skipped".format(src_file),
-      file=sys.stderr
-    )
-    return
+    if not needs_update(src_file, dst_file):
+      if printer_config.existing.file:
+        print("= {0}".format(dst_file))
+      return
+
+    # Clear the dst_file to prevent issues with copying and reconversion
+    os.remove(dst_file)
 
   # If the file name doesn't match, a conversion is implied
   if src_name != dst_name:
@@ -130,7 +131,6 @@ def copy_or_convert(printer_config: PrinterConfig,
     subprocess.call(
       [
         'ffmpeg',
-        '-y',                         # Set to override existing files
         '-i', src_file,               # Set the source file
         '-vn',                        # Disable video
         '-c:a', target_config.codec,  # Set the audio codec
