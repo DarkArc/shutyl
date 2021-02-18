@@ -21,6 +21,8 @@ import os
 import pathlib
 import shutil
 import subprocess
+import sys
+import time
 
 from concurrent.futures import ThreadPoolExecutor
 from typing import List
@@ -93,6 +95,11 @@ def needs_update(src_file: str, dst_file: str):
 
   return src_file_stats.st_mtime > dst_file_stats.st_mtime
 
+# check if a src_file has been updated in the future
+def updated_in_future(src_file: str):
+  src_file_stats = get_file_stats(src_file)
+  return src_file_stats.st_mtime > time.time()
+
 # Copy or convert the file src_name in src_root to dst_root with dst_name
 def copy_or_convert(printer_config: PrinterConfig,
                     target_config: TargetConfig,
@@ -105,6 +112,14 @@ def copy_or_convert(printer_config: PrinterConfig,
   if not needs_update(src_file, dst_file):
     if printer_config.existing.file:
       print("= {0}".format(dst_file))
+    return
+
+  # If the file was updated in the future, skip it
+  if updated_in_future(src_file):
+    print(
+      "! {0} - was updated in the future, skipped".format(src_file),
+      file=sys.stderr
+    )
     return
 
   # If the file name doesn't match, a conversion is implied
