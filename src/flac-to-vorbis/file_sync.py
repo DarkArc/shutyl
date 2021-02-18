@@ -130,6 +130,7 @@ def copy_or_convert(printer_config: PrinterConfig,
     subprocess.call(
       [
         'ffmpeg',
+        '-y',                         # Set to override existing files
         '-i', src_file,               # Set the source file
         '-vn',                        # Disable video
         '-c:a', target_config.codec,  # Set the audio codec
