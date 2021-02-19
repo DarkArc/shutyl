@@ -125,10 +125,11 @@ def copy_or_convert(printer_config: PrinterConfig,
 
   # If the file name doesn't match, a conversion is implied
   if src_name != dst_name:
-    # Use ffmpeg to perform a conversion
     if printer_config.conversion.file:
       print("~ {0}".format(dst_file))
-    subprocess.call(
+
+    # Execute the conversion
+    return_code = subprocess.call(
       [
         'ffmpeg',
         '-i', src_file,               # Set the source file
@@ -139,6 +140,13 @@ def copy_or_convert(printer_config: PrinterConfig,
       ],
       stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL
     )
+
+    # Warn if the conversion didn't exit cleanly
+    if return_code != 0:
+      print(
+        "! {0} - file conversion did not exit cleanly".format(src_file),
+        file=sys.stderr
+      )
   else:
     # Copy the file preserving metadata
     if printer_config.add.file:
