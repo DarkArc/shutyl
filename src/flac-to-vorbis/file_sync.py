@@ -236,7 +236,7 @@ def remove_files(config: ScriptConfig):
       dst_folder = os.path.join(dst_root, name)
       if not os.path.exists(src_folder):
         if config.printer.remove.directory:
-          print(colored("- {0}".format(dst_folder), 'grey'))
+          print(colored("- {0}".format(dst_folder), 'cyan'))
         os.rmdir(dst_folder)
 
     # Remove destination files that no longer exist in the source file set
@@ -248,5 +248,5 @@ def remove_files(config: ScriptConfig):
 
       if should_remove_file(config.conversion, src_files, dst_name):
         if config.printer.remove.file:
-          print(colored("- {0}".format(dst_file), 'grey'))
+          print(colored("- {0}".format(dst_file), 'cyan'))
         os.remove(dst_file)
