@@ -28,6 +28,7 @@ def parse_args():
   parser = argparse.ArgumentParser(description='Create a compressed version of your music library.')
   parser.add_argument('config_file', help='the configuration file for the music library')
   parser.add_argument('-v', '--verbose', dest ='verbose', action='store_true', help='force verbose printing mode')
+  parser.add_argument('--rebuild', dest='rebuild', action='store_true', help='force reconvert and copy')
 
   return parser.parse_args()
 
@@ -46,6 +47,9 @@ def validate_config(config: ScriptConfig):
 def apply_flags(args, config: ScriptConfig):
   if args.verbose:
     config.printer.make_verbose()
+
+  if args.rebuild:
+    config.force_rebuild()
 
 if __name__ == '__main__':
   args = parse_args()

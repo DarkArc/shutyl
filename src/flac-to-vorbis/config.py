@@ -78,6 +78,11 @@ class ScriptConfig(object):
     self.conversion = ConversionConfig(**conversion)
     self.printer = PrinterConfig(**printer)
 
+    self.blind_rebuild = False
+
+  def force_rebuild(self):
+    self.blind_rebuild = True
+
 def load_config(config_file):
   with open(config_file, 'r') as file_handle:
     file_content = file_handle.read()

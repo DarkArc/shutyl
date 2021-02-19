@@ -92,35 +92,61 @@ def needs_update(src_file: str, dst_file: str):
 
   return src_file_stats.st_mtime > dst_file_stats.st_mtime
 
-# check if a src_file has been updated in the future
+# Check if a src_file has been updated in the future
 def updated_in_future(src_file: str):
   src_file_stats = get_file_stats(src_file)
   return src_file_stats.st_mtime > time.time()
 
-# Copy or convert the file src_name in src_root to dst_root with dst_name
-def copy_or_convert(printer_config: PrinterConfig,
-                    target_config: TargetConfig,
-                    src_root: str, src_name: str,
-                    dst_root: str, dst_name: str):
-  src_file = os.path.join(src_root, src_name)
-  dst_file = os.path.join(dst_root, dst_name)
+# Interrogate to determine if we need to skip this file
+def should_skip_file(config: ScriptConfig, src_file: str, dst_file: str):
+  # If the dst_file doesn't exist, we definitely shouldn't skip this
+  # file
+  if not os.path.exists(dst_file):
+    return False
 
-  # If the file doesn't need an update, skip it
-  if os.path.exists(dst_file):
+  # If we aren't blindly rebuilding, and the dst_file exists
+  # check some additional details
+  if not config.blind_rebuild:
     # If the file was updated in the future, skip it
     if updated_in_future(src_file):
-      print(
-        "! {0} - was updated in the future, skipped".format(src_file),
-        file=sys.stderr
-      )
-      return
+      return True
 
+    # If the file doesn't need an update, skip it
     if not needs_update(src_file, dst_file):
       if printer_config.existing.file:
         print("= {0}".format(dst_file))
-      return
+      return True
 
-    # Clear the dst_file to prevent issues with copying and reconversion
+  # We passed the additional checks, this file should not be skipped
+  return False
+
+# Copy or convert the file src_name in src_root to dst_root with dst_name
+def copy_or_convert(config: ScriptConfig,
+                    src_root: str, src_name: str,
+                    dst_root: str, dst_name: str):
+  printer_config = config.printer
+  target_config = config.conversion.target
+
+  src_file = os.path.join(src_root, src_name)
+  dst_file = os.path.join(dst_root, dst_name)
+
+  # Warn on any files updated in the future, it's effectively
+  # impossible to tell if this needs reconverted
+  if updated_in_future(src_file):
+    print(
+      "! {0} - was updated in the future".format(src_file),
+      file=sys.stderr
+    )
+
+  # Check to see if we should skip this file
+  if should_skip_file(config, src_file, dst_file):
+    return
+
+  # If the dst_file exists, and we've passed the above file skip check
+  # we need to remove the file for reconversion or re-copying
+  #
+  # Additional note: shutil.copy2 will not overwrite existing files
+  if os.path.exists(dst_file):
     os.remove(dst_file)
 
   # If the file name doesn't match, a conversion is implied
@@ -181,8 +207,7 @@ def add_files(config: ScriptConfig):
         dst_name = to_dst_file_name(config.conversion, src_name)
 
         executor.submit(
-          copy_or_convert,
-          config.printer, config.conversion.target,
+          copy_or_convert, config,
           src_root, src_name,
           dst_root, dst_name
         )
