@@ -17,6 +17,7 @@
 
 from config import load_config, ScriptConfig
 from file_sync import add_files, remove_files
+from signal_monitor import SignalMonitor
 
 import argparse
 import os
@@ -79,5 +80,7 @@ if __name__ == '__main__':
   validate_config(config)
   apply_flags(args, config)
 
-  add_files(config)
-  remove_files(config)
+  signal_monitor = SignalMonitor()
+
+  add_files(config, signal_monitor)
+  remove_files(config, signal_monitor)

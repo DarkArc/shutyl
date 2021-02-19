@@ -16,6 +16,7 @@
 # along with flac-to-vorbis.  If not, see <https://www.gnu.org/licenses/>.
 
 from config import ScriptConfig, ConversionConfig, TargetConfig, PrinterConfig
+from signal_monitor import SignalMonitor
 
 import os
 import pathlib
@@ -122,11 +123,11 @@ def should_skip_file(config: ScriptConfig, src_file: str, dst_file: str):
   return False
 
 # Copy or convert the file src_name in src_root to dst_root with dst_name
-def copy_or_convert(config: ScriptConfig,
+def copy_or_convert(config: ScriptConfig, signal_monitor: SignalMonitor,
                     src_root: str, src_name: str,
                     dst_root: str, dst_name: str):
-  printer_config = config.printer
-  target_config = config.conversion.target
+  if signal_monitor.quit_asap:
+    return
 
   src_file = os.path.join(src_root, src_name)
   dst_file = os.path.join(dst_root, dst_name)
@@ -152,10 +153,11 @@ def copy_or_convert(config: ScriptConfig,
 
   # If the file name doesn't match, a conversion is implied
   if src_name != dst_name:
-    if printer_config.conversion.file:
+    if config.printer.conversion.file:
       print(colored("~ {0}".format(dst_file), 'green'))
 
     # Execute the conversion
+    target_config = config.conversion.target
     return_code = subprocess.call(
       [
         'ffmpeg',
@@ -170,23 +172,33 @@ def copy_or_convert(config: ScriptConfig,
 
     # Warn if the conversion didn't exit cleanly
     if return_code != 0:
-      print(
-        colored("! {0} - file conversion did not exit cleanly".format(src_file), 'red'),
-        file=sys.stderr
-      )
+      # At the time of writing the subprocess also receives the signal
+      # so if we're terminating early, suppress the error message
+      if not signal_monitor.quit_asap:
+        print(
+          colored("! {0} - file conversion did not exit cleanly".format(src_file), 'red'),
+          file=sys.stderr
+        )
+
+      # Cleanup any partial or invalid file
+      if os.path.exists(dst_file):
+        os.remove(dst_file)
   else:
     # Copy the file preserving metadata
-    if printer_config.add.file:
+    if config.printer.add.file:
       print(colored("+ {0}".format(dst_file), 'green'))
     shutil.copy2(src_file, dst_file, follow_symlinks=False)
 
-def add_files(config: ScriptConfig):
+def add_files(config: ScriptConfig, signal_monitor: SignalMonitor):
   with ThreadPoolExecutor() as executor:
     for src_root, dirs, files in os.walk(config.src_dir):
       # Setup the destination directory
       dst_root = src_root.replace(config.src_dir, config.dst_dir, 1)
 
       for name in dirs:
+        if signal_monitor.quit_asap:
+          return
+
         # Skip hidden files
         if name.startswith('.'):
           continue
@@ -201,6 +213,9 @@ def add_files(config: ScriptConfig):
           print("= {0}".format(dst_folder))
 
       for src_name in files:
+        if signal_monitor.quit_asap:
+          return
+
         # Skip hidden files
         if src_name.startswith('.'):
           continue
@@ -208,7 +223,8 @@ def add_files(config: ScriptConfig):
         dst_name = to_dst_file_name(config.conversion, src_name)
 
         executor.submit(
-          copy_or_convert, config,
+          copy_or_convert,
+          config, signal_monitor,
           src_root, src_name,
           dst_root, dst_name
         )
@@ -221,13 +237,16 @@ def should_remove_file(config: ConversionConfig,
     return True
   return False
 
-def remove_files(config: ScriptConfig):
+def remove_files(config: ScriptConfig, signal_monitor: SignalMonitor):
   for dst_root, dirs, files in os.walk(config.dst_dir, topdown=False):
     # Setup the source directory
     src_root = dst_root.replace(config.dst_dir, config.src_dir, 1)
 
     # Remove destination directories that no longer exist in the source file set
     for name in dirs:
+      if signal_monitor.quit_asap:
+        return
+
       # Compatibility with syncthing
       if name == '.stfolder':
         continue
@@ -241,6 +260,9 @@ def remove_files(config: ScriptConfig):
 
     # Remove destination files that no longer exist in the source file set
     for dst_name in files:
+      if signal_monitor.quit_asap:
+        return
+
       src_names = to_src_file_names(config.conversion, dst_name)
       src_files = to_src_files(src_root, src_names)
 
