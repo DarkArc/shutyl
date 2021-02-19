@@ -25,6 +25,7 @@ import sys
 import time
 
 from concurrent.futures import ThreadPoolExecutor
+from termcolor import colored
 from typing import List
 
 # Convert src_ext to a dst_ext
@@ -134,7 +135,7 @@ def copy_or_convert(config: ScriptConfig,
   # impossible to tell if this needs reconverted
   if updated_in_future(src_file):
     print(
-      "! {0} - was updated in the future".format(src_file),
+      colored("! {0} - was updated in the future".format(src_file), 'red'),
       file=sys.stderr
     )
 
@@ -152,7 +153,7 @@ def copy_or_convert(config: ScriptConfig,
   # If the file name doesn't match, a conversion is implied
   if src_name != dst_name:
     if printer_config.conversion.file:
-      print("~ {0}".format(dst_file))
+      print(colored("~ {0}".format(dst_file), 'green'))
 
     # Execute the conversion
     return_code = subprocess.call(
@@ -170,13 +171,13 @@ def copy_or_convert(config: ScriptConfig,
     # Warn if the conversion didn't exit cleanly
     if return_code != 0:
       print(
-        "! {0} - file conversion did not exit cleanly".format(src_file),
+        colored("! {0} - file conversion did not exit cleanly".format(src_file), 'red'),
         file=sys.stderr
       )
   else:
     # Copy the file preserving metadata
     if printer_config.add.file:
-      print("+ {0}".format(dst_file))
+      print(colored("+ {0}".format(dst_file), 'green'))
     shutil.copy2(src_file, dst_file, follow_symlinks=False)
 
 def add_files(config: ScriptConfig):
@@ -194,7 +195,7 @@ def add_files(config: ScriptConfig):
         dst_folder = os.path.join(dst_root, name)
         if not os.path.exists(dst_folder):
           if config.printer.add.directory:
-            print("+ {0}".format(dst_folder))
+            print(colored("+ {0}".format(dst_folder), 'green'))
           os.makedirs(dst_folder)
         elif config.printer.existing.directory:
           print("= {0}".format(dst_folder))
@@ -235,7 +236,7 @@ def remove_files(config: ScriptConfig):
       dst_folder = os.path.join(dst_root, name)
       if not os.path.exists(src_folder):
         if config.printer.remove.directory:
-          print("- {0}".format(dst_folder))
+          print(colored("- {0}".format(dst_folder), 'grey'))
         os.rmdir(dst_folder)
 
     # Remove destination files that no longer exist in the source file set
@@ -247,5 +248,5 @@ def remove_files(config: ScriptConfig):
 
       if should_remove_file(config.conversion, src_files, dst_name):
         if config.printer.remove.file:
-          print("- {0}".format(dst_file))
+          print(colored("- {0}".format(dst_file), 'grey'))
         os.remove(dst_file)
