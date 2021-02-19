@@ -114,7 +114,7 @@ def should_skip_file(config: ScriptConfig, src_file: str, dst_file: str):
 
     # If the file doesn't need an update, skip it
     if not needs_update(src_file, dst_file):
-      if printer_config.existing.file:
+      if config.printer.existing.file:
         print("= {0}".format(dst_file))
       return True
 
