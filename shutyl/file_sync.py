@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with shutyl.  If not, see <https://www.gnu.org/licenses/>.
 
-from config import ScriptConfig, ConversionConfig, TargetConfig, PrinterConfig
-from signal_monitor import SignalMonitor
+from .config import ScriptConfig, ConversionConfig, TargetConfig, PrinterConfig
+from .signal_monitor import SignalMonitor
 
 import os
 import pathlib

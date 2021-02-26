@@ -15,9 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with shutyl.  If not, see <https://www.gnu.org/licenses/>.
 
-from config import load_config, ScriptConfig
-from file_sync import add_files, remove_files
-from signal_monitor import SignalMonitor
+from .config import load_config, ScriptConfig
+from .file_sync import add_files, remove_files
+from .signal_monitor import SignalMonitor
 
 import argparse
 import os
@@ -52,7 +52,7 @@ def apply_flags(args, config: ScriptConfig):
   if args.rebuild:
     config.force_rebuild()
 
-if __name__ == '__main__':
+def main():
   args = parse_args()
 
   config_file = args.config_file
