@@ -24,6 +24,7 @@ import shutil
 import subprocess
 import sys
 import time
+import traceback
 
 from concurrent.futures import ThreadPoolExecutor
 from termcolor import colored
@@ -151,7 +152,7 @@ def copy_or_convert(config: ScriptConfig, signal_monitor: SignalMonitor,
   # impossible to tell if this needs reconverted
   if updated_in_future(src_file):
     print(
-      colored("! {0} - was updated in the future".format(src_file), 'red'),
+      colored(f"! {src_file} - was updated in the future", 'red'),
       file=sys.stderr
     )
 
@@ -169,14 +170,23 @@ def copy_or_convert(config: ScriptConfig, signal_monitor: SignalMonitor,
   # If the file name doesn't match, a conversion is implied
   if src_name != dst_name:
     if config.printer.conversion.file:
-      print(colored("~ {0}".format(dst_file), 'green'))
+      print(colored(f"~ {dst_file}", 'green'))
 
     # Execute the conversion
-    target_config = config.conversion.target
-    return_code = subprocess.call(
-      get_ffmpeg_args(target_config, src_file, dst_file),
-      stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL
-    )
+    return_code = -1
+    try:
+      target_config = config.conversion.target
+      return_code = subprocess.call(
+        get_ffmpeg_args(target_config, src_file, dst_file),
+        stderr = subprocess.DEVNULL,
+        stdout = subprocess.DEVNULL
+      )
+    except FileNotFoundError as fnf:
+      if  "'ffmpeg'" in str(fnf):
+        print(colored('FATAL: ffmpeg not found', 'red'), file = sys.stderr)
+        exit(1)
+    except:
+      traceback.print_exc()
 
     # Warn if the conversion didn't exit cleanly
     if return_code != 0:
@@ -184,8 +194,11 @@ def copy_or_convert(config: ScriptConfig, signal_monitor: SignalMonitor,
       # so if we're terminating early, suppress the error message
       if not signal_monitor.quit_asap:
         print(
-          colored("! {0} - file conversion did not exit cleanly".format(src_file), 'red'),
-          file=sys.stderr
+          colored(
+            f"! {src_file} - file conversion did not exit cleanly",
+            'red'
+          ),
+          file = sys.stderr
         )
 
       # Cleanup any partial or invalid file
@@ -194,8 +207,8 @@ def copy_or_convert(config: ScriptConfig, signal_monitor: SignalMonitor,
   else:
     # Copy the file preserving metadata
     if config.printer.add.file:
-      print(colored("+ {0}".format(dst_file), 'green'))
-    shutil.copy2(src_file, dst_file, follow_symlinks=False)
+      print(colored(f"+ {dst_file}", 'green'))
+    shutil.copy2(src_file, dst_file, follow_symlinks = False)
 
 def add_files(config: ScriptConfig, signal_monitor: SignalMonitor):
   with ThreadPoolExecutor() as executor:
@@ -215,10 +228,10 @@ def add_files(config: ScriptConfig, signal_monitor: SignalMonitor):
         dst_folder = os.path.join(dst_root, name)
         if not os.path.exists(dst_folder):
           if config.printer.add.directory:
-            print(colored("+ {0}".format(dst_folder), 'green'))
+            print(colored(f"+ {dst_folder}", 'green'))
           os.makedirs(dst_folder)
         elif config.printer.existing.directory:
-          print("= {0}".format(dst_folder))
+          print(f"= {dst_folder}")
 
       for src_name in files:
         if signal_monitor.quit_asap:
@@ -263,7 +276,7 @@ def remove_files(config: ScriptConfig, signal_monitor: SignalMonitor):
       dst_folder = os.path.join(dst_root, name)
       if not os.path.exists(src_folder):
         if config.printer.remove.directory:
-          print(colored("- {0}".format(dst_folder), 'cyan'))
+          print(colored(f"- {dst_folder}", 'cyan'))
         os.rmdir(dst_folder)
 
     # Remove destination files that no longer exist in the source file set
@@ -278,5 +291,5 @@ def remove_files(config: ScriptConfig, signal_monitor: SignalMonitor):
 
       if should_remove_file(config.conversion, src_files, dst_name):
         if config.printer.remove.file:
-          print(colored("- {0}".format(dst_file), 'cyan'))
+          print(colored("- {dst_file}", 'cyan'))
         os.remove(dst_file)
