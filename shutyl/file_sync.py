@@ -122,6 +122,21 @@ def should_skip_file(config: ScriptConfig, src_file: str, dst_file: str):
   # We passed the additional checks, this file should not be skipped
   return False
 
+def get_ffmpeg_args(target_config, src_file, dst_file):
+  args = ['ffmpeg']
+  # Set the source file
+  args.extend(['-i', src_file])
+  # Disable video for libvorbis to prevent ogg video
+  if target_config.codec == 'libvorbis':
+    args.append('-vn')
+  # Set the audio codec
+  args.extend(['-c:a', target_config.codec])
+  # Set the target bitrate
+  args.extend(['-ab', target_config.bitrate])
+  # Set the destination file
+  args.append(dst_file)
+  return args
+
 # Copy or convert the file src_name in src_root to dst_root with dst_name
 def copy_or_convert(config: ScriptConfig, signal_monitor: SignalMonitor,
                     src_root: str, src_name: str,
@@ -159,14 +174,7 @@ def copy_or_convert(config: ScriptConfig, signal_monitor: SignalMonitor,
     # Execute the conversion
     target_config = config.conversion.target
     return_code = subprocess.call(
-      [
-        'ffmpeg',
-        '-i', src_file,               # Set the source file
-        '-vn',                        # Disable video
-        '-c:a', target_config.codec,  # Set the audio codec
-        '-ab', target_config.bitrate, # Set the target bitrate
-        dst_file                      # Set the destination file
-      ],
+      get_ffmpeg_args(target_config, src_file, dst_file),
       stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL
     )
 
