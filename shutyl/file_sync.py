@@ -291,5 +291,5 @@ def remove_files(config: ScriptConfig, signal_monitor: SignalMonitor):
 
       if should_remove_file(config.conversion, src_files, dst_name):
         if config.printer.remove.file:
-          print(colored("- {dst_file}", 'cyan'))
+          print(colored(f"- {dst_file}", 'cyan'))
         os.remove(dst_file)
