@@ -1,6 +1,63 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "shutyl"
+description = 'Update monitor brightness intelligently using the DDC protocol.'
+readme = "README.md"
+requires-python = ">=3.7"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "Wyatt Childers", email = "wchilders@nearce.com" },
 ]
-build-backend = "setuptools.build_meta"
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Natural Language :: English",
+  "Operating System :: OS Independent"
+]
+dependencies = ["yoctopuce"]
+dynamic = ["version"]
+
+[project.urls]
+Documentation = "https://github.com/DarkArc/shutyl#readme"
+Issues = "https://github.com/DarkArc/shutyl/issues"
+Source = "https://github.com/DarkArc/shutyl"
+
+[project.scripts]
+shutyl = "shutyl.main:main"
+
+[tool.hatch.version]
+path = "shutyl/__about__.py"
+
+[tool.hatch.build.targets.sdist]
+[tool.hatch.build.targets.wheel]
+
+[tool.hatch.envs.default]
+dependencies = [
+  "pytest",
+  "pytest-cov",
+]
+[tool.hatch.envs.default.scripts]
+cov = "pytest --cov-report=term-missing --cov-config=pyproject.toml --cov=shutyl --cov=tests"
+no-cov = "cov --no-cov"
+
+[[tool.hatch.envs.test.matrix]]
+python = ["37", "38", "39", "310"]
+
+[tool.coverage.run]
+branch = true
+parallel = true
+omit = [
+  "shutyl/__about__.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
