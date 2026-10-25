@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "shutyl"
-description = 'Update monitor brightness intelligently using the DDC protocol.'
+description = 'A file conversion and copying tool for making compressed copies of music libraries.'
 readme = "README.md"
 requires-python = ">=3.7"
 license = "GPL-3.0-only"
@@ -19,6 +19,7 @@ classifiers = [
   "Natural Language :: English",
   "Operating System :: OS Independent"
 ]
+dependencies = ["termcolor"]
 dynamic = ["version"]
 
 [project.urls]
@@ -35,17 +36,11 @@ path = "shutyl/__about__.py"
 [tool.hatch.build.targets.sdist]
 [tool.hatch.build.targets.wheel]
 
-[tool.hatch.envs.default]
-dependencies = [
+[dependency-groups]
+dev = [
   "pytest",
   "pytest-cov",
 ]
-[tool.hatch.envs.default.scripts]
-cov = "pytest --cov-report=term-missing --cov-config=pyproject.toml --cov=shutyl --cov=tests"
-no-cov = "cov --no-cov"
-
-[[tool.hatch.envs.test.matrix]]
-python = ["37", "38", "39", "310"]
 
 [tool.coverage.run]
 branch = true

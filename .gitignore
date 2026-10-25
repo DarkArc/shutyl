@@ -1,3 +1,4 @@
 __pycache__/
 dist/
 shutyl.egg-info/
+.venv/
